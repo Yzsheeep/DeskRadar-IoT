@@ -1,0 +1,18 @@
+# 过滤 IDE 与编辑器的配置文件 (你截图里的前三个文件夹)
+.idea/
+.settings/
+.vscode/
+.clangd
+
+# 过滤 CMake 编译生成的庞大缓存文件夹
+build/
+cmake-build-debug/
+cmake/
+
+# 过滤单片机编译过程中产生的各种零碎中间产物
+*.o
+*.obj
+*.elf
+*.hex
+*.bin
+*.map
