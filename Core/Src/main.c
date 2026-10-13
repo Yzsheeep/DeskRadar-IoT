@@ -18,6 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
+#include "dma.h"
 #include "i2c.h"
 #include "usart.h"
 #include "gpio.h"
@@ -26,8 +28,6 @@
 /* USER CODE BEGIN Includes */
 #include "oled.h"
 #include "radar.h"
-#include "filter.h"
-#include "ui.h"
 #include "esp01s.h"
 #include <stdio.h>
 
@@ -56,6 +56,7 @@
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -94,6 +95,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_I2C1_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
@@ -101,12 +103,18 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_Delay(50);
   OLED_Init();
-  ESP01S_Init_WiFi(); // 初始化 WiFi 连接
-  OLED_NewFrame();
-  OLED_PrintString(0, 0, "Wait Radar...", &font16x16, OLED_COLOR_NORMAL);
-  OLED_ShowFrame();
-  HAL_UART_Receive_IT(&huart2, &rx_byte, 1);
+
+
   /* USER CODE END 2 */
+
+  /* Init scheduler */
+  osKernelInitialize();  /* Call init function for freertos objects (in cmsis_os2.c) */
+  MX_FREERTOS_Init();
+
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -117,16 +125,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    Radar_Data_Filter(); 
-    Update_UI();         
-    
-    // 每隔 2000 毫秒（2秒）往云端推一次数据，防止发太快被 OneNet 踢下线
-    if (HAL_GetTick() - last_post_time > 2000) {
-        ESP01S_Post_Data(filtered_dist, display_state);
-        last_post_time = HAL_GetTick(); 
-    }
-
-    HAL_Delay(50);       
+   
   }
   /* USER CODE END 3 */
 }
@@ -171,30 +170,30 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-// 【正规军玩法】：HAL 库标准接收完成回调函数
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-    // 判断是不是 USART2 触发的中断（因为以后你可能还会开其他串口）
-    if (huart->Instance == USART2) {
-        
-        rx_count++; // 只要进来，说明成功收到了 1 个字节，计数器 +1
-        Parse_Radar_Data(rx_byte); // 把这 1 个字节丢给状态机去拼凑
-        
-        // 【绝不能忘的最后一步】：再定一个闹钟！继续接收下一个字节！
-        HAL_UART_Receive_IT(&huart2, &rx_byte, 1);
-    }
-}
 
-// 【保险机制】：防止偶尔的数据错乱导致串口假死
-void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
-{
-    if (huart->Instance == USART2) {
-        // 如果因为波特率太快发生了 ORE（溢出错误），HAL 库会自动跳到这里
-        // 咱们简单粗暴一点，发生错误就强行重启接收“闹钟”
-        HAL_UART_Receive_IT(&huart2, &rx_byte, 1);
-    }
-}
 /* USER CODE END 4 */
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM4 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM4)
+  {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+
+  /* USER CODE END Callback 1 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.

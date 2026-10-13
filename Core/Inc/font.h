@@ -40,4 +40,5 @@ typedef struct Image {
 
 extern const Image bilibiliImg;
 extern const Image sheepImg;
+extern const Image wifiImg;
 #endif // __FONT_H

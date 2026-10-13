@@ -774,3 +774,17 @@ void OLED_PrintString(uint8_t x, uint8_t y, char *str, const Font *font, OLED_Co
     }
   }
 }
+
+/**
+ * @brief 在指定坐标绘制 WiFi 状态图标
+ * @param x, y 坐标
+ * @param is_online 1-在线常亮, 0-离线闪烁
+ */
+void OLED_DrawWiFiStatus(uint8_t x, uint8_t y, uint8_t is_online)
+{
+    // 在线常亮；离线时每 500ms 翻转一次
+    if (is_online || ((HAL_GetTick() / 500) % 2))
+    {
+        OLED_DrawImage(x, y, &wifiImg, OLED_COLOR_NORMAL);
+    }
+}

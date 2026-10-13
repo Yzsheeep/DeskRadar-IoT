@@ -48,8 +48,6 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/oled.c
     Core/Src/font.c
     Core/Src/radar.c
-    Core/Src/filter.c
-    Core/Src/ui.c
     Core/Src/esp01s.c
 )
 
